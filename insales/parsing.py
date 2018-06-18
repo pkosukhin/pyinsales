@@ -3,14 +3,14 @@
 from decimal import Decimal
 from collections import deque
 from copy import copy
-from io import BytesIO
+from io import StringIO
 
 import xml.sax
 import xml.sax.handler
 
 import datetime
 import re
-import iso8601
+#import iso8601
 
 
 def format_open_tag(name, attrs):
@@ -161,7 +161,7 @@ class DateHandler(ElementHandler):
     default = None
 
     def on_content(self, content):
-        self.value = datetime.datetime.strptime(content.strip(), "%Y-%m-%d")
+        self.value = content.strip()
 
 
 class TimestampHandler(ElementHandler):
@@ -172,8 +172,7 @@ class TimestampHandler(ElementHandler):
     def on_content(self, content):
         # convert 2010-08-16 18:39:58 +0400
         # to      2010-08-16 18:39:58+04:00
-        string = self.date_re.sub(r"+\1:\2", content.strip())
-        self.value = iso8601.parse_date(string)
+        self.value = content.strip()
 
 
 all_handlers = [
@@ -221,11 +220,16 @@ class XmlProcessor(xml.sax.handler.ContentHandler):
 
 def parse(xml_string):
     processor = XmlProcessor()
-    io = BytesIO(xml_string)
+    xml_string = xml_string.decode('utf-8')
+    io = StringIO(xml_string)
 
     parser = xml.sax.make_parser()
     parser.setContentHandler(processor)
     for line in io:
+        # Hack: InSales doesn't bother about malformed xml
+        # and thus doesn't escampe '&' symbols in URLs
+        # escape'em manually
+        line = re.sub(r'\&([^#])', r'&amp;\1', line)
         parser.feed(line)
 
     return processor.data()

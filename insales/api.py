@@ -4,7 +4,6 @@ from insales.parsing import parse
 from insales.composing import compose
 from insales.connection import Connection
 
-
 class InSalesApi(object):
 
     arrays = {
@@ -19,8 +18,8 @@ class InSalesApi(object):
     }
 
     @classmethod
-    def from_credentials(cls, account, api_key, password, **kwargs):
-        return cls(Connection(account, api_key, password, **kwargs))
+    def from_credentials(cls, account, api_key, password):
+        return cls(Connection(account, api_key, password))
 
     def __init__(self, connection):
         self.connection = connection
@@ -30,7 +29,13 @@ class InSalesApi(object):
     #========================================================================
     def get_orders(self, per_page=25, page=1):
         return self._get('/admin/orders.xml', {'per_page': per_page, 'page': page}) or []
-
+    
+    def get_orders_bystatus(self, status='new'):
+        if isinstance(status,(str,)):
+            status = [status]
+        status_query = '&'.join(['fulfillment_status[]={}'.format(s) for s in status])
+        return self._get('/admin/orders.xml?{}'.format(status_query))
+    
     def get_order(self, order_id):
         return self._get('/admin/orders/%s.xml' % order_id)
 
@@ -56,6 +61,13 @@ class InSalesApi(object):
     #========================================================================
     def get_orders_fields(self):
         return self._get('/admin/orders/fields.xml')
+    
+    #========================================================================
+    # Статусы
+    #========================================================================
+    def get_custom_statuses(self):
+        return self._get('/admin/custom_statuses.xml')
+
 
     #========================================================================
     # Категории на складе
@@ -183,6 +195,10 @@ class InSalesApi(object):
         return self._update('/admin/products/%s/variants/%s.xml' %
                             (product_id, variant_id),
                             variant_data, root='variant')
+    
+    def update_product_variants_group(self, variants_data):
+        return self._update('/admin/products/variants_group_update.xml', 
+                            variants_data, root='variants')
 
     def delete_product_variant(self, product_id, variant_id):
         self._delete('/admin/products/%s/variants/%s.xml' % (product_id, variant_id))
@@ -210,14 +226,12 @@ class InSalesApi(object):
     #========================================================================
     # Размещение товара
     #========================================================================
-    def get_collects(self, product_id=None, collection_id=None, page=1):
+    def get_collects(self, product_id=None, collection_id=None):
         qargs = {}
         if product_id:
             qargs['product_id'] = product_id
         if collection_id:
             qargs['collection_id'] = collection_id
-
-        qargs['page'] = page
 
         return self._get('/admin/collects.xml', qargs) or []
 
@@ -230,26 +244,6 @@ class InSalesApi(object):
 
     def delete_collect(self, collect_id):
         return self._delete('/admin/collects/%s.xml' % collect_id)
-
-    #========================================================================
-    # Аналогичные товары
-    #========================================================================
-    def get_similars(self, product_id):
-        return self._get('/admin/products/%s/similars.xml' % product_id) or []
-
-    def delete_similar(self, product_id, similar_product_id):
-        return self._delete('/admin/products/%s/similars/%s.xml' %
-                            (product_id, similar_product_id))
-
-    #========================================================================
-    # Сопутствующие товары
-    #========================================================================
-    def get_supplementaries(self, product_id):
-        return self._get('/admin/products/%s/supplementaries.xml' % product_id) or []
-
-    def delete_supplementary(self, product_id, supplementary_product_id):
-        return self._delete('/admin/products/%s/supplementaries/%s.xml' %
-                            (product_id, supplementary_product_id))
 
     #========================================================================
     # Веб-хуки

@@ -5,17 +5,7 @@ import collections
 import xml.etree.ElementTree as et
 
 from decimal import Decimal
-
-# Python 2, 3 intercompatibility
-try:
-    basestring
-except NameError:
-    basestring = str
-
-try:
-    long
-except NameError:
-    long = int
+from six import string_types
 
 def compose(data, root, arrays={}):
     root_e = compose_element(root, data, arrays)
@@ -23,12 +13,12 @@ def compose(data, root, arrays={}):
 
 def compose_element(key, value, arrays={}):
     e = et.Element(key)
-    if isinstance(value, basestring):
+    if isinstance(value, string_types):
         e.text = value
-    elif isinstance(value, (int, long)):
+    elif isinstance(value, int):
         e.attrib['type'] = 'integer'
         e.text = str(value)
-    elif isinstance(value, Decimal):
+    elif isinstance(value, float):
         e.attrib['type'] = 'decimal'
         e.text = str(value)
     elif isinstance(value, datetime.datetime):
